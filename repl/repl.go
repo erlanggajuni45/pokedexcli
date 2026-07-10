@@ -1,5 +1,10 @@
 package repl
 
-func cleanInput(text string) []string {
-	return []string{}
+import "strings"
+
+func CleanInput(text string) []string {
+	if text == "" {
+		return []string{}
+	}
+	return strings.Split(strings.TrimSpace(strings.ToLower(text)), " ")
 }
