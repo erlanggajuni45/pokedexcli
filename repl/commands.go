@@ -46,6 +46,11 @@ func getCommands() map[string]cliCommand {
 			description: "Displays a list of locations",
 			callback:    commandMap,
 		},
+		"mapb": {
+			name:        "mapb",
+			description: "Displays a list of locations (backward)",
+			callback:    commandMapb,
+		},
 	}
 }
 
@@ -69,6 +74,38 @@ func commandMap(c *config) error {
 
 	if c.Next != "" {
 		url = c.Next
+	}
+
+	res, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("failed to fetch data from the API: %v", err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("API request failed with status code: %d", res.StatusCode)
+	}
+
+	var apiResponse mapAPIResponse
+	err = json.NewDecoder(res.Body).Decode(&apiResponse)
+	if err != nil {
+		return fmt.Errorf("failed to decode API response: %v", err)
+	}
+
+	for _, location := range apiResponse.Results {
+		fmt.Println(location.Name)
+	}
+
+	*c = apiResponse.config
+
+	return nil
+}
+
+func commandMapb(c *config) error {
+	url := "https://pokeapi.co/api/v2/location-area/"
+
+	if c.Previous != "" {
+		url = c.Previous
 	}
 
 	res, err := http.Get(url)
