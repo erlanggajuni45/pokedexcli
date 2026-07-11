@@ -3,14 +3,17 @@ package repl
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
+
+	"github.com/erlanggajuni45/pokedexcli/internal/pokecache"
 )
 
 type cliCommand struct {
 	name        string
 	description string
-	callback    func(c *config) error
+	callback    func(c *config, cache *pokecache.Cache) error
 }
 
 type config struct {
@@ -54,13 +57,13 @@ func getCommands() map[string]cliCommand {
 	}
 }
 
-func commandExit(c *config) error {
+func commandExit(c *config, cache *pokecache.Cache) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandHelp(c *config) error {
+func commandHelp(c *config, cache *pokecache.Cache) error {
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Printf("Usage:\n\n")
 	for _, command := range getCommands() {
@@ -69,25 +72,29 @@ func commandHelp(c *config) error {
 	return nil
 }
 
-func commandMap(c *config) error {
+func commandMap(c *config, cache *pokecache.Cache) error {
 	url := "https://pokeapi.co/api/v2/location-area/"
 
 	if c.Next != "" {
 		url = c.Next
 	}
 
-	res, err := http.Get(url)
-	if err != nil {
-		return fmt.Errorf("failed to fetch data from the API: %v", err)
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("API request failed with status code: %d", res.StatusCode)
-	}
-
 	var apiResponse mapAPIResponse
-	err = json.NewDecoder(res.Body).Decode(&apiResponse)
+
+	// check if the response is already cached
+	var data []byte
+	if cachedData, exists := cache.Get(url); exists {
+		data = cachedData
+	} else {
+		// fetch data from the API if not cached
+		dat, err := fetchData(url, cache)
+		if err != nil {
+			return fmt.Errorf("failed to fetch data: %v", err)
+		}
+		data = dat
+	}
+
+	err := json.Unmarshal(data, &apiResponse)
 	if err != nil {
 		return fmt.Errorf("failed to decode API response: %v", err)
 	}
@@ -101,25 +108,29 @@ func commandMap(c *config) error {
 	return nil
 }
 
-func commandMapb(c *config) error {
+func commandMapb(c *config, cache *pokecache.Cache) error {
 	url := "https://pokeapi.co/api/v2/location-area/"
 
 	if c.Previous != "" {
 		url = c.Previous
 	}
 
-	res, err := http.Get(url)
-	if err != nil {
-		return fmt.Errorf("failed to fetch data from the API: %v", err)
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("API request failed with status code: %d", res.StatusCode)
-	}
-
 	var apiResponse mapAPIResponse
-	err = json.NewDecoder(res.Body).Decode(&apiResponse)
+
+	// check if the response is already cached
+	var data []byte
+	if cachedData, exists := cache.Get(url); exists {
+		data = cachedData
+	} else {
+		// fetch data from the API if not cached
+		dat, err := fetchData(url, cache)
+		if err != nil {
+			return fmt.Errorf("failed to fetch data: %v", err)
+		}
+		data = dat
+	}
+
+	err := json.Unmarshal(data, &apiResponse)
 	if err != nil {
 		return fmt.Errorf("failed to decode API response: %v", err)
 	}
@@ -131,4 +142,25 @@ func commandMapb(c *config) error {
 	*c = apiResponse.config
 
 	return nil
+}
+
+func fetchData(url string, cache *pokecache.Cache) ([]byte, error) {
+	res, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch data from the API: %v", err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API request failed with status code: %d", res.StatusCode)
+	}
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read API response body: %v", err)
+	}
+
+	cache.Add(url, data)
+
+	return data, nil
 }
