@@ -22,7 +22,7 @@ This project interacts with the [PokéAPI](https://pokeapi.co/) to let users exp
 Clone the repository:
 
 ```bash
-git clone https://github.com/your-username/pokedexcli.git
+git clone https://github.com/erlanggajuni45/pokedexcli.git
 cd pokedexcli
 ```
 
