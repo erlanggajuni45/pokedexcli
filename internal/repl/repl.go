@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
+
+	"github.com/erlanggajuni45/pokedexcli/internal/pokecache"
 )
 
 func cleanInput(text string) []string {
@@ -17,6 +20,7 @@ func cleanInput(text string) []string {
 func StartREPL() {
 	scanner := bufio.NewScanner(os.Stdin)
 	config := config{}
+	cache := pokecache.NewCache(10 * time.Second)
 	for {
 		fmt.Print("Pokedex > ")
 		scanner.Scan()
@@ -29,7 +33,7 @@ func StartREPL() {
 
 		commandName := inputs[0]
 		if command, exists := getCommands()[commandName]; exists {
-			err := command.callback(&config)
+			err := command.callback(&config, &cache)
 			if err != nil {
 				fmt.Printf("Error occurred while executing command '%s': %v\n", command.name, err)
 			}
