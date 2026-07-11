@@ -33,7 +33,7 @@ func StartREPL() {
 
 		commandName := inputs[0]
 		if command, exists := getCommands()[commandName]; exists {
-			err := command.callback(&config, &cache)
+			err := command.callback(&config, &cache, inputs[1:]...)
 			if err != nil {
 				fmt.Printf("Error occurred while executing command '%s': %v\n", command.name, err)
 			}

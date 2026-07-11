@@ -13,7 +13,7 @@ import (
 type cliCommand struct {
 	name        string
 	description string
-	callback    func(c *config, cache *pokecache.Cache) error
+	callback    func(c *config, cache *pokecache.Cache, opts ...string) error
 }
 
 type config struct {
@@ -30,6 +30,14 @@ type mapAPIResponse struct {
 type locationArea struct {
 	Name string `json:"name"`
 	URL  string `json:"url"`
+}
+
+type exploreAPIResponse struct {
+	PokemonEncounters []pokemonEncounter `json:"pokemon_encounters"`
+}
+
+type pokemonEncounter struct {
+	Pokemon locationArea `json:"pokemon"`
 }
 
 func getCommands() map[string]cliCommand {
@@ -54,16 +62,21 @@ func getCommands() map[string]cliCommand {
 			description: "Displays a list of locations (backward)",
 			callback:    commandMapb,
 		},
+		"explore": {
+			name:        "explore",
+			description: "Explore a specific location",
+			callback:    commandExplore,
+		},
 	}
 }
 
-func commandExit(c *config, cache *pokecache.Cache) error {
+func commandExit(c *config, cache *pokecache.Cache, opts ...string) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandHelp(c *config, cache *pokecache.Cache) error {
+func commandHelp(c *config, cache *pokecache.Cache, opts ...string) error {
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Printf("Usage:\n\n")
 	for _, command := range getCommands() {
@@ -72,7 +85,7 @@ func commandHelp(c *config, cache *pokecache.Cache) error {
 	return nil
 }
 
-func commandMap(c *config, cache *pokecache.Cache) error {
+func commandMap(c *config, cache *pokecache.Cache, opts ...string) error {
 	url := "https://pokeapi.co/api/v2/location-area/"
 
 	if c.Next != "" {
@@ -108,7 +121,7 @@ func commandMap(c *config, cache *pokecache.Cache) error {
 	return nil
 }
 
-func commandMapb(c *config, cache *pokecache.Cache) error {
+func commandMapb(c *config, cache *pokecache.Cache, opts ...string) error {
 	url := "https://pokeapi.co/api/v2/location-area/"
 
 	if c.Previous != "" {
@@ -140,6 +153,46 @@ func commandMapb(c *config, cache *pokecache.Cache) error {
 	}
 
 	*c = apiResponse.config
+
+	return nil
+}
+
+func commandExplore(c *config, cache *pokecache.Cache, opts ...string) error {
+	location := opts[0]
+	fmt.Println("Exploring location:", location)
+
+	url := "https://pokeapi.co/api/v2/location-area/" + location
+
+	var apiResponse exploreAPIResponse
+
+	// check if the response is already cached
+	var data []byte
+	if cachedData, exists := cache.Get(url); exists {
+		data = cachedData
+	} else {
+		// fetch data from the API if not cached
+		dat, err := fetchData(url, cache)
+		if err != nil {
+			return fmt.Errorf("failed to fetch data: %v", err)
+		}
+		data = dat
+	}
+
+	err := json.Unmarshal(data, &apiResponse)
+	if err != nil {
+		return fmt.Errorf("failed to decode API response: %v", err)
+	}
+
+	if len(apiResponse.PokemonEncounters) == 0 {
+		fmt.Println("No Pokémon encounters found in this location.")
+		return nil
+	}
+
+	fmt.Println("Found Pokémon:")
+
+	for _, encounter := range apiResponse.PokemonEncounters {
+		fmt.Println("- " + encounter.Pokemon.Name)
+	}
 
 	return nil
 }
