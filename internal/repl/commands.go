@@ -25,20 +25,31 @@ type config struct {
 type mapAPIResponse struct {
 	Count int `json:"count"`
 	config
-	Results []locationArea `json:"results"`
+	Results []info `json:"results"`
 }
 
-type locationArea struct {
+type info struct {
 	Name string `json:"name"`
 	URL  string `json:"url"`
 }
 
 type pokemon struct {
-	Id             int    `json:"id"`
-	Name           string `json:"name"`
-	BaseExperience int    `json:"base_experience"`
-	Height         int    `json:"height"`
-	Weight         int    `json:"weight"`
+	Id             int           `json:"id"`
+	Name           string        `json:"name"`
+	BaseExperience int           `json:"base_experience"`
+	Height         int           `json:"height"`
+	Weight         int           `json:"weight"`
+	Types          []pokemonType `json:"types"`
+	Stats          []pokemonStat `json:"stats"`
+}
+
+type pokemonType struct {
+	Type info `json:"type"`
+}
+
+type pokemonStat struct {
+	BaseStat int  `json:"base_stat"`
+	Stat     info `json:"stat"`
 }
 
 var pokemons = make(map[string]pokemon)
@@ -48,7 +59,7 @@ type exploreAPIResponse struct {
 }
 
 type pokemonEncounter struct {
-	Pokemon locationArea `json:"pokemon"`
+	Pokemon info `json:"pokemon"`
 }
 
 func getCommands() map[string]cliCommand {
