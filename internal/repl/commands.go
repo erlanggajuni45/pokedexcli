@@ -64,8 +64,13 @@ func getCommands() map[string]cliCommand {
 		},
 		"explore": {
 			name:        "explore",
-			description: "Explore a specific location",
+			description: "Explore a specific location and show list of Pokémon encounters",
 			callback:    commandExplore,
+		},
+		"catch": {
+			name:        "catch",
+			description: "Catch a specific Pokémon",
+			callback:    commandCatch,
 		},
 	}
 }
@@ -194,6 +199,10 @@ func commandExplore(c *config, cache *pokecache.Cache, opts ...string) error {
 		fmt.Println("- " + encounter.Pokemon.Name)
 	}
 
+	return nil
+}
+
+func commandCatch(c *config, cache *pokecache.Cache, opts ...string) error {
 	return nil
 }
 
