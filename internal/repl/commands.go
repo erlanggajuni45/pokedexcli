@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"os"
 
@@ -31,6 +32,16 @@ type locationArea struct {
 	Name string `json:"name"`
 	URL  string `json:"url"`
 }
+
+type pokemon struct {
+	Id             int    `json:"id"`
+	Name           string `json:"name"`
+	BaseExperience int    `json:"base_experience"`
+	Height         int    `json:"height"`
+	Weight         int    `json:"weight"`
+}
+
+var pokemons = make(map[string]pokemon)
 
 type exploreAPIResponse struct {
 	PokemonEncounters []pokemonEncounter `json:"pokemon_encounters"`
@@ -203,6 +214,38 @@ func commandExplore(c *config, cache *pokecache.Cache, opts ...string) error {
 }
 
 func commandCatch(c *config, cache *pokecache.Cache, opts ...string) error {
+	chance := rand.Intn(400)
+	pokemonTarget := opts[0]
+	fmt.Printf("Throwing a Pokeball at %s...\n", pokemonTarget)
+
+	var data []byte
+	url := "https://pokeapi.co/api/v2/pokemon/" + pokemonTarget
+
+	// check if the response is already cached
+	if cachedData, exists := cache.Get(url); exists {
+		data = cachedData
+	} else {
+		// fetch data from the API if not cached
+		dat, err := fetchData(url, cache)
+		if err != nil {
+			return fmt.Errorf("failed to fetch data: %v", err)
+		}
+		data = dat
+	}
+
+	var poke pokemon
+	err := json.Unmarshal(data, &poke)
+	if err != nil {
+		return fmt.Errorf("failed to decode API response: %v", err)
+	}
+
+	if chance >= poke.BaseExperience {
+		pokemons[poke.Name] = poke
+		fmt.Printf("%s was caught!\n", poke.Name)
+	} else {
+		fmt.Printf("%s escaped!\n", poke.Name)
+	}
+
 	return nil
 }
 
